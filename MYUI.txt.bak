@@ -1,0 +1,305 @@
+void myui::QstringToHex(QString str,QByteArray &senddata)
+{
+    int hexdata,lowhexdata;
+    int hexdatalen = 0;
+    int len = str.length();
+    senddata.resize(len/2);
+    char lstr,hstr;
+    for(int i=0;i<len;)
+    {
+        hstr = str[i].toLatin1();
+        if(hstr == ' ')
+        {
+            i++;
+            continue;
+        }
+        i++;
+        if(i >= len)
+            break;
+        lstr = str[i].toLatin1();
+        hexdata = ConvertHexChar(hstr);
+        lowhexdata = ConvertHexChar(lstr);
+        if((hexdata == 16) || (lowhexdata == 16))
+            break;
+        else
+            hexdata = hexdata*16+lowhexdata;
+        i++;
+        senddata[hexdatalen] = (char)hexdata;
+        hexdatalen++;
+    }
+    senddata.resize(hexdatalen);
+}
+
+char myui::ConvertHexChar(char ch)
+{
+    if((ch >= '0') && (ch <= '9'))
+        return ch-0x30;
+    else if((ch >= 'A') && (ch <= 'F'))
+        return ch-'A'+10;
+    else if((ch >= 'a') && (ch <= 'f'))
+        return ch-'a'+10;
+    else return(-1);
+}
+
+void myui::Recvdata()
+{
+    //memset(strr.rebuf, 0, 32);
+    //serial->read(strr.rebuf,sizeof(strr.rebuf));
+    QByteArray dataarray;
+    dataarray = serial->readAll();
+    QByteArray temp;
+    temp.append(dataarray);
+
+    QDateTime dateTime = QDateTime::currentDateTime();
+        // 字符串格式化
+    QString timestamp = dateTime.toString("hh:mm:ss.zzz");
+        // 获取毫秒值
+    //int ms = dateTime.time().msec();
+        // 转换成时间戳
+    //qint64 epochTime = dateTime.toMSecsSinceEpoch();
+
+    //QByteArray temp(strr.rebuf,sizeof(strr.rebuf));//QByteArray是一个用来存放二进制数据的字节数组
+    QByteArray temp0;
+    QByteArray temp1 = temp;
+    QByteArray temp2 = temp;
+
+    temp0 = temp.toHex().toUpper();//十六进制，大写
+    qDebug()<<temp0<<endl;
+    n = 0;
+    m = 0;
+    p = 0;
+    QString strInput = temp0;//QByteArray与QString互转
+    QString Pat = " ";
+
+
+  
+
+//    QFile file("RA.txt");
+//    /*if(file.size()>10240)
+//    {
+
+//    }
+//    else*/
+//    {
+//        if(!file.open(QIODevice::WriteOnly | QIODevice::Text| QIODevice::Append) )
+//        {
+//            QMessageBox::warning(this, "title", "File not open");
+//        }
+//    }
+
+//    QTextStream out(&file);
+//    QString timestr = timestamp;
+//    QString text = strInput;
+//    out << endl << timestr << Pat << text;
+//    file.flush();
+//    file.close();
+
+    QString strLongInfo = timestamp.append(Pat).append(strInput);
+    RA->info(strLongInfo);//日志输出
+
+    if(strInput.contains("FFA510"))
+    {
+        n = strInput.indexOf("FFA510");
+        m = strInput.lastIndexOf("FFA510");
+        if(!(m-n))
+        {
+            temp1 = temp0.mid(n+6,2); //mid(int position, int n) position：截取的开始位置 n：截取的长度
+            Knob1_rotationcnt = (Knob1_rotationcnt + qint8(temp1.toUShort(nullptr,16)));
+            QString str = QString::number(Knob1_rotationcnt);
+            ui->lineEdit_Knob1OK->setText(str); //显示
+
+            //temp = temp.mid(i+6,2);
+            //ui->lineEdit_Knob1Value->setText(temp);
+            temp1 = temp0.mid(n+10,2);
+            Knob2_rotationcnt = (Knob2_rotationcnt + qint8(temp1.toUShort(nullptr,16)));
+            str = QString::number(Knob2_rotationcnt);
+            ui->lineEdit_Knob2OK->setText(str);
+
+            temp1 = temp0.mid(n+14,2);
+            temp2 = temp.mid(n/2+7,1);
+            ptr8 = temp2.data();
+            QString c = temp1;
+            DebouncedSwitchPressDataAnalysis(ptr8,c);
+
+            temp1 = temp0.mid(n+18,2);
+            temp2 = temp.mid(n/2+9,1);
+            ptr9 = temp2.data();
+            QString d = temp1;
+            DebouncedInputStatusDataAnalysis(ptr9,d);
+        }
+        else {
+            temp1 = temp0.mid(m+6,2); //mid(int position, int n) position：截取的开始位置 n：截取的长度
+            Knob1_rotationcnt = (Knob1_rotationcnt + temp1.toInt());
+            QString str = QString::number(Knob1_rotationcnt);
+            ui->lineEdit_Knob1OK->setText(str); //显示
+
+            //temp = temp.mid(i+6,2);
+            //ui->lineEdit_Knob1Value->setText(temp);
+            temp1 = temp0.mid(m+10,2);
+            Knob2_rotationcnt = (Knob2_rotationcnt + temp1.toInt());
+            str = QString::number(Knob2_rotationcnt);
+            ui->lineEdit_Knob2OK->setText(str);
+
+            temp1 = temp0.mid(m+14,2);
+            temp2 = temp.mid(m/2+7,1);
+            ptr8 = temp2.data();
+            QString c = temp1;
+            DebouncedSwitchPressDataAnalysis(ptr8,c);
+
+            temp1 = temp0.mid(m+18,2);
+            temp2 = temp.mid(m/2+9,1);
+            ptr9 = temp2.data();
+            QString d = temp1;
+            DebouncedInputStatusDataAnalysis(ptr9,d);
+        }
+        while(n!=m)
+        {
+
+            temp1 = temp0.mid(n+6,2); //mid(int position, int n) position：截取的开始位置 n：截取的长度
+            Knob1_rotationcnt = (Knob1_rotationcnt + temp1.toInt());
+            QString str = QString::number(Knob1_rotationcnt);
+            ui->lineEdit_Knob1OK->setText(str); //显示
+
+            //temp = temp.mid(i+6,2);
+            //ui->lineEdit_Knob1Value->setText(temp);
+            temp1 = temp0.mid(n+10,2);
+            Knob2_rotationcnt = (Knob2_rotationcnt + temp1.toInt());
+            str = QString::number(Knob2_rotationcnt);
+            ui->lineEdit_Knob2OK->setText(str);
+
+            temp1 = temp0.mid(n+14,2);
+            temp2 = temp.mid(n/2+7,1);
+            ptr8 = temp2.data();
+            QString c = temp1;
+            DebouncedSwitchPressDataAnalysis(ptr8,c);
+
+            temp1 = temp0.mid(n+18,2);
+            temp2 = temp.mid(n/2+9,1);
+            ptr9 = temp2.data();
+            QString d = temp1;
+            DebouncedInputStatusDataAnalysis(ptr9,d);
+            n = n+22;//move and match for the next segment by 20 chars.
+            n = strInput.indexOf("FFA510",n);
+        }
+    }
+
+     if(strInput.contains("FFA51A"))
+    {
+         n = strInput.indexOf("FFA51A");
+
+         temp1 = temp0.mid(n+6,8);
+         temp2 = temp.mid(n+3,4);
+         ptr8 = temp2.data();
+         QString e = temp1;
+         Diagnosis1ValueAnalysis(ptr8,e);
+         //ui->lineEdit_Diagnostic1OK->setText(temp1);
+    }
+     if(strInput.contains("FFA51E"))
+    {
+        n = strInput.indexOf("FFA51E");
+
+         temp1 = temp0.mid(n+6,6);
+         temp2 = temp.mid(n+3,3);
+         ptr9 = temp2.data();
+         QString e = temp1;
+         Diagnosis2ValueAnalysis(ptr9,e);
+        //ui->lineEdit_Diagnostic2OK->setText(temp1);
+
+    }
+
+     if(strInput.contains("FFA500"))
+    {
+         n = strInput.indexOf("FFA500");
+         temp1 = temp0.mid(n+6,4);
+         QString a = temp1;
+         HardawareVersionDataAnalysis(a);
+
+    }
+     if(strInput.contains("FFA502"))
+    {
+         n = strInput.indexOf("FFA502");
+         temp1 = temp0.mid(n+6,4);
+         QString a = temp1;
+         FirmwareVersionDataAnalysis(a);
+
+    }
+
+     if(strInput.contains("FF91"))
+    {
+        n = strInput.indexOf("FF91");
+
+        temp1 = temp0.mid(n+4,10);
+        hex1 = temp1.mid(0,2);
+        hex2 = temp1.mid(2,2);
+        hex_a = QString("%1%2").arg(hex2).arg(hex1);
+        hex3 = temp1.mid(4,2);
+        hex4 = temp1.mid(6,2);
+        hex_b = QString("%1%2").arg(hex4).arg(hex3);
+        int temp3 = hex_a.toInt(&ok,16);
+        int temp4 = hex_b.toInt(&ok,16);
+        ui->lineEdit_X->setText(QString::number(temp3));
+        ui->lineEdit_Y->setText(QString::number(temp4));
+        if(processdata::Instance().touchMode == 1)
+        {
+            int result = Touchcoordinationanalysis(QString::number(temp3),QString::number(temp4));
+            switch (result)
+            {
+            case 0:
+                touchNGcount++;
+                ui->lineEdit_NGCTP->setText(QString::number(touchNGcount));
+                break;
+            case 1:
+                ui->CTP_SIGNAL1->setPixmap(pm_green->scaled(QSize(12,12),Qt::IgnoreAspectRatio,Qt::SmoothTransformation));
+                touchOKcount++;
+                ui->lineEdit_OKCTP->setText(QString::number(touchOKcount));
+                break;
+            case 2:
+                ui->CTP_SIGNAL2->setPixmap(pm_green->scaled(QSize(12,12),Qt::IgnoreAspectRatio,Qt::SmoothTransformation));
+                touchOKcount++;
+                ui->lineEdit_OKCTP->setText(QString::number(touchOKcount));
+                break;
+            case 3:
+                ui->CTP_SIGNAL3->setPixmap(pm_green->scaled(QSize(12,12),Qt::IgnoreAspectRatio,Qt::SmoothTransformation));
+                touchOKcount++;
+                ui->lineEdit_OKCTP->setText(QString::number(touchOKcount));
+                break;
+            case 4:
+                ui->CTP_SIGNAL4->setPixmap(pm_green->scaled(QSize(12,12),Qt::IgnoreAspectRatio,Qt::SmoothTransformation));
+                touchOKcount++;
+                ui->lineEdit_OKCTP->setText(QString::number(touchOKcount));
+                break;
+            case 5:
+                ui->CTP_SIGNAL5->setPixmap(pm_green->scaled(QSize(12,12),Qt::IgnoreAspectRatio,Qt::SmoothTransformation));
+                touchOKcount++;
+                ui->lineEdit_OKCTP->setText(QString::number(touchOKcount));
+                break;
+            }
+        }
+        //PointValueAnalysis(temp3,temp4);
+    }
+
+     if(strInput.contains("FFA57B26"))
+     {
+         n = strInput.indexOf("FFA57B26");
+         temp1 = temp0.mid(n+8,2);
+         hex1 = temp1.mid(0,2);
+         hex_a = QString("%1").arg(hex1);
+         int temp3 = hex_a.toInt(&ok,16);
+         ui->lineEdit_ReadNTCValue->setText(QString::number(temp3));
+         //ui->lineEdit_ReadNTCValue->setText(temp1);
+     }
+
+     if(strInput.contains("FFA57B14"))
+     {
+         n = strInput.indexOf("FFA57B14");
+         temp1 = temp0.mid(n+8,2);
+         hex2 = temp1.mid(0,2);
+         hex_b = QString("%1").arg(hex2);
+         int temp4 = hex_b.toInt(&ok,16);
+         ui->lineEdit_PWMValueRead->setText(QString::number(temp4));
+     }
+     temp0.clear();
+     temp1.clear();
+     temp2.clear();
+     temp.clear();
+}
